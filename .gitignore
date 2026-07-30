@@ -6,3 +6,6 @@ vector_store/
 uploads/
 *.pkl
 *.faiss
+.DS_Store
+repomix-output.txt
+docs/
