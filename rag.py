@@ -10,7 +10,13 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import pdfplumber
 
-EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+EMBED_MODEL = None
+
+def get_embed_model():
+    global EMBED_MODEL
+    if EMBED_MODEL is None:
+        EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    return EMBED_MODEL
 CHUNK_SIZE  = 500
 CHUNK_OVERLAP = 50
 
@@ -44,7 +50,7 @@ def chunk_text(text):
 
 
 def build_index(chunks):
-    embeddings = EMBED_MODEL.encode(chunks, show_progress_bar=True)
+    embeddings = get_embed_model().encode(chunks, show_progress_bar=True)
     embeddings = np.array(embeddings).astype("float32")
     faiss.normalize_L2(embeddings)
 
@@ -66,7 +72,7 @@ def retrieve(query, top_k=4):
     with open(CHUNKS_STORE, "rb") as f:
         chunks = pickle.load(f)
 
-    q_embed = EMBED_MODEL.encode([query]).astype("float32")
+    q_embed = get_embed_model().encode([query]).astype("float32")
     faiss.normalize_L2(q_embed)
 
     scores, indices = index.search(q_embed, top_k)

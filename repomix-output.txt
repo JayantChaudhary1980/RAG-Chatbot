@@ -1,0 +1,433 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: **/.git/**, **/*.db, **/venv/**, **/__pycache__/**, **/node_modules/**
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+
+================================================================
+Directory Structure
+================================================================
+templates/
+  index.html
+.env.example
+.gitignore
+app.py
+rag.py
+requirements.txt
+
+================================================================
+Files
+================================================================
+
+================
+File: templates/index.html
+================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RAG Chatbot</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; padding: 24px 16px; }
+    .layout { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    h1 { font-size: 1.4rem; color: #1a1a2e; }
+    .subtitle { font-size: 0.83rem; color: #888; margin-top: 4px; margin-bottom: 4px; }
+    .card { background: #fff; border-radius: 12px; padding: 22px 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+    .upload-area {
+      border: 2px dashed #c7d2fe; border-radius: 10px;
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: border 0.2s; margin-bottom: 12px;
+    }
+    .upload-area:hover { border-color: #4f46e5; }
+    .upload-area input { display: none; }
+    .upload-area p { font-size: 0.88rem; color: #666; }
+    .status { font-size: 0.82rem; margin-top: 8px; padding: 8px 12px; border-radius: 6px; }
+    .status.success { background: #d1fae5; color: #065f46; }
+    .status.error   { background: #fee2e2; color: #991b1b; }
+    .status.loading { background: #e0e7ff; color: #3730a3; }
+    .chat-box {
+      height: 360px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px;
+      margin-bottom: 14px; padding: 4px;
+    }
+    .msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; line-height: 1.5; }
+    .user { align-self: flex-end; background: #4f46e5; color: #fff; border-bottom-right-radius: 4px; }
+    .bot  { align-self: flex-start; background: #f1f1f1; color: #222; border-bottom-left-radius: 4px; }
+    .sources { margin-top: 6px; font-size: 0.72rem; color: #888; }
+    .source-item { background: #f9f9f9; border-left: 3px solid #c7d2fe; padding: 5px 8px; margin-top: 4px; border-radius: 4px; }
+    .input-row { display: flex; gap: 8px; }
+    input[type="text"] {
+      flex: 1; padding: 11px 14px;
+      border: 1px solid #ddd; border-radius: 25px;
+      font-size: 0.9rem; outline: none;
+    }
+    input:focus { border-color: #4f46e5; }
+    button {
+      padding: 11px 20px; background: #4f46e5; color: #fff;
+      border: none; border-radius: 25px; font-size: 0.9rem; cursor: pointer;
+    }
+    button:hover { background: #4338ca; }
+    .empty { text-align: center; color: #bbb; font-size: 0.85rem; margin: auto; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div>
+      <h1>RAG Chatbot</h1>
+      <p class="subtitle">Upload a PDF and ask questions about it</p>
+    </div>
+
+    <div class="card">
+      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".pdf" onchange="uploadFile()"/>
+        <p>Click to upload a PDF document</p>
+        <p style="font-size:0.75rem; color:#aaa; margin-top:4px">Max 16MB</p>
+      </div>
+      <div class="status" id="uploadStatus" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <div class="chat-box" id="chatBox">
+        <p class="empty">Upload a PDF, then ask questions below.</p>
+      </div>
+      <div class="input-row">
+        <input type="text" id="questionInput" placeholder="Ask a question about the document..."/>
+        <button onclick="sendQuestion()">Ask</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById("chatBox");
+
+    document.getElementById("questionInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") sendQuestion();
+    });
+
+    async function uploadFile() {
+      const file   = document.getElementById("fileInput").files[0];
+      const status = document.getElementById("uploadStatus");
+      if (!file) return;
+
+      status.style.display = "block";
+      status.className = "status loading";
+      status.textContent = "Processing PDF...";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res  = await fetch("/upload", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.error) {
+        status.className = "status error";
+        status.textContent = data.error;
+      } else {
+        status.className = "status success";
+        status.textContent = data.message;
+        chatBox.innerHTML = "";
+      }
+    }
+
+    async function sendQuestion() {
+      const input = document.getElementById("questionInput");
+      const q     = input.value.trim();
+      if (!q) return;
+
+      appendMsg(q, "user");
+      input.value = "";
+
+      const res  = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        appendMsg(data.error, "bot");
+        return;
+      }
+
+      let html = data.answer;
+      if (data.sources && data.sources.length > 0) {
+        html += `<div class="sources"><strong>Sources:</strong>`;
+        data.sources.slice(0, 2).forEach(s => {
+          html += `<div class="source-item">${s.text} <em>(score: ${s.score})</em></div>`;
+        });
+        html += `</div>`;
+      }
+      appendMsg(html, "bot", true);
+    }
+
+    function appendMsg(text, cls, isHTML = false) {
+      const div = document.createElement("div");
+      div.className = `msg ${cls}`;
+      if (isHTML) div.innerHTML = text;
+      else div.textContent = text;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
+
+================
+File: .env.example
+================
+GROQ_API_KEY=your_groq_api_key_here
+
+================
+File: .gitignore
+================
+venv/
+__pycache__/
+*.pyc
+.env
+vector_store/
+uploads/
+*.pkl
+*.faiss
+
+================
+File: app.py
+================
+"""
+RAG Chatbot — PDF upload + FAISS + Groq LLM
+"""
+
+import os
+from flask import Flask, render_template, request, jsonify, session
+from werkzeug.utils import secure_filename
+from groq import Groq
+from rag import process_pdf, retrieve
+
+app = Flask(__name__)
+app.secret_key  = "rag_chatbot_secret_2024"
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
+
+UPLOAD_FOLDER   = "uploads"
+ALLOWED_EXT     = {"pdf"}
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
+
+
+def ask_groq(question, context_chunks):
+    context = "\n\n---\n\n".join([c["chunk"] for c in context_chunks])
+    prompt  = f"""You are a helpful assistant. Answer the question using ONLY the context below.
+If the answer is not in the context, say "I couldn't find this in the uploaded document."
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:"""
+
+    response = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=512,
+    )
+    return response.choices[0].message.content.strip()
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files["file"]
+    if file.filename == "" or not allowed_file(file.filename):
+        return jsonify({"error": "Please upload a valid PDF file"}), 400
+
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+
+    n_chunks = process_pdf(filepath)
+    return jsonify({"message": f"PDF processed successfully. {n_chunks} chunks indexed.", "filename": filename})
+
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    data     = request.get_json()
+    question = data.get("question", "").strip()
+
+    if not question:
+        return jsonify({"error": "Please enter a question"}), 400
+
+    if not os.path.exists("vector_store/index.faiss"):
+        return jsonify({"error": "Please upload a PDF document first"}), 400
+
+    chunks = retrieve(question, top_k=4)
+    if not chunks:
+        return jsonify({"answer": "No relevant content found in the document.", "sources": []})
+
+    answer  = ask_groq(question, chunks)
+    sources = [{"text": c["chunk"][:200] + "...", "score": c["score"]} for c in chunks]
+
+    return jsonify({"answer": answer, "sources": sources})
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5002)
+
+================
+File: rag.py
+================
+"""
+RAG Core — chunking, embedding, FAISS, retrieval
+"""
+
+import os
+import faiss
+import numpy as np
+import pickle
+from pathlib import Path
+from sentence_transformers import SentenceTransformer
+import pdfplumber
+
+EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+CHUNK_SIZE  = 500
+CHUNK_OVERLAP = 50
+
+VECTOR_STORE = "vector_store/index.faiss"
+CHUNKS_STORE = "vector_store/chunks.pkl"
+
+os.makedirs("vector_store", exist_ok=True)
+os.makedirs("uploads", exist_ok=True)
+
+
+def extract_text(pdf_path):
+    text = ""
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            t = page.extract_text()
+            if t:
+                text += t + "\n"
+    return text
+
+
+def chunk_text(text):
+    words  = text.split()
+    chunks = []
+    start  = 0
+    while start < len(words):
+        end   = min(start + CHUNK_SIZE, len(words))
+        chunk = " ".join(words[start:end])
+        chunks.append(chunk)
+        start += CHUNK_SIZE - CHUNK_OVERLAP
+    return chunks
+
+
+def build_index(chunks):
+    embeddings = EMBED_MODEL.encode(chunks, show_progress_bar=True)
+    embeddings = np.array(embeddings).astype("float32")
+    faiss.normalize_L2(embeddings)
+
+    index = faiss.IndexFlatIP(embeddings.shape[1])
+    index.add(embeddings)
+
+    faiss.write_index(index, VECTOR_STORE)
+    with open(CHUNKS_STORE, "wb") as f:
+        pickle.dump(chunks, f)
+
+    return len(chunks)
+
+
+def retrieve(query, top_k=4):
+    if not os.path.exists(VECTOR_STORE):
+        return []
+
+    index = faiss.read_index(VECTOR_STORE)
+    with open(CHUNKS_STORE, "rb") as f:
+        chunks = pickle.load(f)
+
+    q_embed = EMBED_MODEL.encode([query]).astype("float32")
+    faiss.normalize_L2(q_embed)
+
+    scores, indices = index.search(q_embed, top_k)
+    results = []
+    for score, idx in zip(scores[0], indices[0]):
+        if idx < len(chunks):
+            results.append({"chunk": chunks[idx], "score": round(float(score), 3)})
+    return results
+
+
+def process_pdf(pdf_path):
+    text   = extract_text(pdf_path)
+    chunks = chunk_text(text)
+    n      = build_index(chunks)
+    return n
+
+================
+File: requirements.txt
+================
+flask==3.0.3
+groq>=0.28.0
+faiss-cpu>=1.12.0
+sentence-transformers==3.0.1
+pdfplumber==0.11.1
+numpy==1.26.4
+werkzeug==3.0.3
+gunicorn==22.0.0
+
+
+
+
+
+================================================================
+End of Codebase
+================================================================
