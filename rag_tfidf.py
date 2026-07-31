@@ -57,7 +57,7 @@ def chunk_text(text):
 def build_index(chunks):
     global _chunks, _vectorizer, _matrix
 
-    vectorizer = TfidfVectorizer(stop_words="english", max_features=10000)
+    vectorizer = TfidfVectorizer(max_features=10000)
     matrix     = vectorizer.fit_transform(chunks)
 
     with open(CHUNKS_STORE, "wb") as f:
@@ -99,7 +99,7 @@ def retrieve(query, top_k=4):
 
     return [
         {"chunk": _chunks[i], "score": round(float(scores[i]), 3)}
-        for i in top_idx if scores[i] > 0
+        for i in top_idx
     ]
 
 
