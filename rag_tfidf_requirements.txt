@@ -1,0 +1,7 @@
+flask==3.0.3
+groq>=0.28.0
+pdfplumber==0.11.1
+scikit-learn==1.5.0
+numpy==1.26.4
+werkzeug==3.0.3
+gunicorn==22.0.0

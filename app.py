@@ -2,7 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 from groq import Groq
-from rag import process_pdf, retrieve
+from rag_tfidf import process_pdf, retrieve
 
 app = Flask(__name__)
 
@@ -114,7 +114,7 @@ def chat():
             "error": "Please enter a question."
         }), 400
 
-    if not os.path.exists("vector_store/index.faiss"):
+    if not os.path.exists("vector_store/chunks.pkl"):
         return jsonify({
             "error": "Please upload a PDF first."
         }), 400
